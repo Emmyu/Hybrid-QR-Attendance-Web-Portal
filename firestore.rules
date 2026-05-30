@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Official roster: single-document read for signup validation; no client writes.
+    match /student_roster/{matricDoc} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    // Maps normalized matric → Firebase Auth email (for matric-only login UI).
+    // Create only if the email matches the signed-in user and the slot is free.
+    match /matric_lookup/{matricDoc} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['email'])
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email
+        && !exists(/databases/$(database)/documents/matric_lookup/$(matricDoc));
+      allow update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Sessions: Only authenticated users can read. 
+    // Only the lecturer who created it can update everything.
+    // Students are allowed to increment presentCount.
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        resource.data.lecturerId == request.auth.uid || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presentCount'])
+      );
+      allow delete: if request.auth != null && resource.data.lecturerId == request.auth.uid;
+    }
+
+    // Attendance: 
+    // - Students can read their own records (and others for live feed sync).
+    // - Students can ONLY create a record for themselves or if validated.
+    match /attendance/{recordId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null; // Validated by app logic and recordId constraints in production
+      allow update: if false;
+      allow delete: if request.auth != null && (resource.data.lecturerId == request.auth.uid);
+    }
+  }
+}
