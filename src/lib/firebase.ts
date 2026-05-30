@@ -30,9 +30,12 @@ let db:   Firestore | null = null
 let analytics: Analytics | null = null
 export let firebaseReady = false
 
-const isPlaceholder = !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith('YOUR_')
+const isValid = firebaseConfig.apiKey && 
+               firebaseConfig.projectId &&
+               !firebaseConfig.apiKey.startsWith('YOUR_') &&
+               firebaseConfig.apiKey.length > 0
 
-if (!isPlaceholder) {
+if (isValid) {
   try {
     app  = initializeApp(firebaseConfig)
     auth = getAuth(app)
@@ -46,7 +49,11 @@ if (!isPlaceholder) {
     console.error('[Stratos] Firebase failed to initialize:', e)
   }
 } else {
-  console.warn('[Stratos] Firebase credentials are not set in src/lib/firebase.ts')
+  console.warn(
+    '[Stratos] Firebase credentials not configured. ' +
+    'Make sure .env.local exists with VITE_FIREBASE_* variables. ' +
+    'If running in production, set environment variables in your deployment platform.'
+  )
 }
 
 export { auth, db, analytics }
