@@ -9,8 +9,7 @@ import {
   onSnapshot, 
   collection, 
   query, 
-  where, 
-  orderBy,
+  where,
   updateDoc,
   serverTimestamp
 } from 'firebase/firestore'
@@ -25,16 +24,19 @@ interface AttendanceRecord {
 }
 
 interface SessionData {
+  id?: string
+  lecturerId?: string
   course: string
   location: string
   type: string
-  expectedCount: number
-  presentCount: number
+  expectedCount?: number
+  presentCount?: number
   status: string
-  qrExpiry: number
-  geofence: boolean
-  deviceBinding: boolean
+  qrExpiry?: number
+  geofence?: boolean
+  deviceBinding?: boolean
   notes?: string
+  [key: string]: any
 }
 
 export default function LiveSessionPage() {
@@ -54,7 +56,7 @@ export default function LiveSessionPage() {
   useEffect(() => {
     if (!sessionId || !db) return
 
-    const unsubscribe = onSnapshot(doc(db, 'sessions', sessionId), (docSnap) => {
+    const unsubscribe = onSnapshot(doc(db!, 'sessions', sessionId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as SessionData
         setSession(data)
@@ -80,7 +82,7 @@ export default function LiveSessionPage() {
     console.log(`LiveSessionPage: Querying attendance for session ID: "${sessionId}"`);
 
     const q = query(
-      collection(db, 'attendance'),
+      collection(db!, 'attendance'),
       where('sessionId', '==', sessionId)
     )
     

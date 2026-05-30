@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, BookOpen, ClipboardList, Calendar,
+  LayoutDashboard, BookOpen, Calendar,
   BarChart2, Settings, LogOut, Bell, HelpCircle, Search, Landmark,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'

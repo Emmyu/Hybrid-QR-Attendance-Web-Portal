@@ -86,6 +86,11 @@ export default function ManualAttendancePage() {
       }
 
       // 2. Verify student exists in institutional roster
+      if (!db) {
+        setError('Database not initialized')
+        setIsSubmitting(false)
+        return
+      }
       const studentSnap = await getDoc(doc(db, 'student_roster', matric))
       
       if (!studentSnap.exists()) {
@@ -96,7 +101,7 @@ export default function ManualAttendancePage() {
 
       // 3. Check for duplicates across ALL records (including QR scans)
       const qDup = query(
-        collection(db, 'attendance'),
+        collection(db!, 'attendance'),
         where('sessionId', '==', sessionId),
         where('studentId', '==', matric)
       )
@@ -111,7 +116,7 @@ export default function ManualAttendancePage() {
       const studentName = studentData.fullName || studentData.name || `Student ${matric.split('-').pop()}`
 
       // 4. Add attendance record (PRD §3.6.3 Schema)
-      await addDoc(collection(db, 'attendance'), {
+      await addDoc(collection(db!, 'attendance'), {
         sessionId,
         lecturerId: user?.uid,
         studentId: matric,
@@ -123,7 +128,7 @@ export default function ManualAttendancePage() {
       
       // 5. Atomically increment the session's presentCount
       if (sessionId) {
-        await updateDoc(doc(db, 'sessions', sessionId), {
+        await updateDoc(doc(db!, 'sessions', sessionId), {
           presentCount: increment(1)
         })
       }

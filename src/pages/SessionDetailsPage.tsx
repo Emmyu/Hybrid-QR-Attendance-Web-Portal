@@ -22,13 +22,25 @@ const statusStyle: Record<string, { badge: string; border: string }> = {
   absent: { badge: 'sd-badge-absent',  border: '#dc2626' },
 }
 
+interface SessionData {
+  id: string
+  course: string
+  lecturerId: string
+  actualStartTime: any
+  location: string
+  type: string
+  expectedCount?: number
+  notes?: string
+  [key: string]: any
+}
+
 export default function SessionDetailsPage() {
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
 
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<SessionData | null>(null)
   const [attendance, setAttendance] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editingNotes, setEditingNotes] = useState(false)
@@ -42,9 +54,9 @@ export default function SessionDetailsPage() {
 
     if (sessionIdFromParam) {
       // Load specific session
-      const unsubSession = onSnapshot(doc(db, 'sessions', sessionIdFromParam), (snap) => {
+      const unsubSession = onSnapshot(doc(db!, 'sessions', sessionIdFromParam), (snap) => {
         if (snap.exists()) {
-          const data = { id: snap.id, ...snap.data() }
+          const data = { id: snap.id, ...snap.data() } as SessionData
           setSession(data)
           setNoteDraft(data.notes || '')
         }
@@ -52,7 +64,7 @@ export default function SessionDetailsPage() {
       })
 
       const qAtt = query(
-        collection(db, 'attendance'),
+        collection(db!, 'attendance'),
         where('sessionId', '==', sessionIdFromParam),
         orderBy('timestamp', 'desc')
       )
@@ -66,7 +78,7 @@ export default function SessionDetailsPage() {
     } else {
       // Load the most recent session for this lecturer
       const qSession = query(
-        collection(db, 'sessions'),
+        collection(db!, 'sessions'),
         where('lecturerId', '==', user.uid),
         orderBy('actualStartTime', 'desc'),
         limit(1)
@@ -77,7 +89,7 @@ export default function SessionDetailsPage() {
       const unsubSession = onSnapshot(qSession, (snap) => {
         if (!snap.empty) {
           const d = snap.docs[0]
-          const data = { id: d.id, ...d.data() }
+          const data = { id: d.id, ...d.data() } as SessionData
           setSession(data)
           setNoteDraft(data.notes || '')
           setLoading(false)
@@ -85,7 +97,7 @@ export default function SessionDetailsPage() {
           // Now subscribe to attendance for this session
           if (unsubAtt) unsubAtt()
           const qAtt = query(
-            collection(db, 'attendance'),
+            collection(db!, 'attendance'),
             where('sessionId', '==', d.id),
             orderBy('timestamp', 'desc')
           )
@@ -108,7 +120,7 @@ export default function SessionDetailsPage() {
     (s.studentId || '').includes(search)
   )
 
-  const attendancePct = session?.expectedCount > 0
+  const attendancePct = session && session.expectedCount && session.expectedCount > 0
     ? Math.round((attendance.length / session.expectedCount) * 100)
     : 0
 
@@ -122,7 +134,7 @@ export default function SessionDetailsPage() {
   const handleSaveNotes = async () => {
     if (!session?.id || !db) return
     try {
-      await updateDoc(doc(db, 'sessions', session.id), {
+      await updateDoc(doc(db!, 'sessions', session.id), {
         notes: noteDraft
       })
       setEditingNotes(false)
